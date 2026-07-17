@@ -7,6 +7,9 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
+import logging
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Position:
@@ -110,3 +113,54 @@ class Portfolio:
     def get_capital(self) -> float:
         """Получить текущий капитал"""
         return self.data.get("capital", 100000.0)
+
+    def get_active_positions(self) -> List[Dict]:
+        """Получить только активные позиции"""
+        return [pos for pos in self.data["positions"] if pos["status"] == "active"]
+
+    def get_position_by_ticker(self, ticker: str) -> Optional[Dict]:
+        """Получить позицию по тикеру"""
+        for pos in self.data["positions"]:
+            if pos["ticker"] == ticker and pos["status"] == "active":
+                return pos
+        return None
+
+    def update_position_price(self, ticker: str, current_price: float) -> Optional[Dict]:
+        """Обновить текущую цену позиции и рассчитать P&L"""
+        for i, pos in enumerate(self.data["positions"]):
+            if pos["ticker"] == ticker and pos["status"] == "active":
+                entry_price = pos["entry_price"]
+                qty = pos["qty"]
+                pnl = (current_price - entry_price) * qty
+                pnl_pct = ((current_price - entry_price) / entry_price) * 100
+
+                self.data["positions"][i]["current_price"] = current_price
+                self.data["positions"][i]["pnl"] = pnl
+                self.data["positions"][i]["pnl_pct"] = pnl_pct
+                self._save_portfolio()
+
+                return self.data["positions"][i]
+        return None
+
+    def check_stop_loss_take_profit(self, ticker: str, current_price: float) -> Optional[str]:
+        """
+        Проверить срабатывание SL/TP.
+        Возвращает 'SL' или 'TP1' или 'TP2' или None
+        """
+        pos = self.get_position_by_ticker(ticker)
+        if not pos:
+            return None
+
+        entry_price = pos["entry_price"]
+        stop_loss = pos["stop_loss"]
+        take_profit_1 = pos["take_profit_1"]
+        take_profit_2 = pos["take_profit_2"]
+
+        if current_price <= stop_loss:
+            return "SL"
+        elif current_price >= take_profit_2:
+            return "TP2"
+        elif current_price >= take_profit_1:
+            return "TP1"
+
+        return None
