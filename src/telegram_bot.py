@@ -419,7 +419,7 @@ class SokolBot:
             logger.error(f"❌ Ошибка закрытия {ticker}: {e}")
             await update.message.reply_text(f"❌ Ошибка закрытия: {e}")
 
-    async def send_sl_tp_alert(self, ticker: str, alert_type: str, current_price: float, position: Dict):
+    async def send_sl_tp_alert(self, ticker: str, alert_type: str, current_price: float, position: dict):
         """Отправить уведомление о срабатывании SL/TP"""
         entry_price = position["entry_price"]
         stop_loss = position["stop_loss"]

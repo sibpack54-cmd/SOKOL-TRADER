@@ -6,7 +6,6 @@ import asyncio
 import logging
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ class OutcomeEngine:
             conn.commit()
             logger.info("Outcomes table initialized")
 
-    async def get_pending_signals(self, checkpoint: int) -> List[Dict]:
+    async def get_pending_signals(self, checkpoint: int) -> list[dict]:
         """
         Найти сигналы, которым исполнилось `checkpoint` дней,
         и по которым ещё нет проверки.
@@ -88,7 +87,7 @@ class OutcomeEngine:
         ticker: str, 
         from_dt: datetime, 
         to_dt: datetime
-    ) -> Optional[pd.DataFrame]:
+    ) -> pd.DataFrame | None:
         """
         Получить свечи за период через Tinkoff REST API.
 
@@ -143,7 +142,7 @@ class OutcomeEngine:
         candles: pd.DataFrame,
         entry_price: float,
         signal_type: str
-    ) -> Tuple[float, float, float, float]:
+    ) -> tuple[float, float, float, float]:
         """
         Рассчитать MFE и MAE.
 
@@ -168,7 +167,7 @@ class OutcomeEngine:
 
         return mfe, mae, mfe_pct, mae_pct
 
-    def determine_verdict(self, change_pct: float, signal_type: str) -> Tuple[str, str]:
+    def determine_verdict(self, change_pct: float, signal_type: str) -> tuple[str, str]:
         """
         Определить вердикт по правилам.
 
@@ -192,7 +191,7 @@ class OutcomeEngine:
             else:
                 return "NEUTRAL", f"SELL: {change_pct:.2f}% (between -{threshold}% and +{threshold}%)"
 
-    async def check_signal(self, signal: Dict, checkpoint: int) -> Optional[Dict]:
+    async def check_signal(self, signal: dict, checkpoint: int) -> dict | None:
         """
         Проверить один сигнал на одном checkpoint.
 
@@ -315,7 +314,7 @@ class OutcomeEngine:
             await self.run_checkpoint(checkpoint)
         logger.info("All outcome checks complete")
 
-    def get_statistics(self) -> Dict:
+    def get_statistics(self) -> dict:
         """Агрегированная статистика по всем outcomes."""
         with sqlite3.connect(self.lab.db_path) as conn:
             conn.row_factory = sqlite3.Row

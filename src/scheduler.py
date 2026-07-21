@@ -9,7 +9,6 @@ import os
 import signal
 import sys
 from datetime import datetime
-from typing import Dict
 
 import telegram
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -182,7 +181,7 @@ async def scheduled_outcome_check(
         logger.error("❌ Outcome check failed: %s", e)
 
 
-async def send_outcome_report(bot: SokolBot, stats: Dict) -> None:
+async def send_outcome_report(bot: SokolBot, stats: dict) -> None:
     """Отправить отчёт по outcomes в Telegram."""
     try:
         parts = []
