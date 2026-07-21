@@ -109,11 +109,11 @@ class TruthLab:
 
             with self._db_lock:
                 with sqlite3.connect(self.db_path) as conn:
-                conn.execute("""
-                    INSERT OR REPLACE INTO signals VALUES (
+                    conn.execute("""
+                        INSERT OR REPLACE INTO signals VALUES (
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                    )
-                """, (
+                        )
+                    """, (
                     signal.signal_id,
                     signal.timestamp,
                     signal.ticker,

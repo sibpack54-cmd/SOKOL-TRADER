@@ -4,6 +4,7 @@ Telegram Bot v0.6 — python-telegram-bot v22.8
 
 import logging
 from datetime import datetime
+from telegram.request import HTTPXRequest
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
@@ -21,7 +22,8 @@ class SokolBot:
         self.token = Config.TELEGRAM_TOKEN
         self.lab = TruthLab(Config.DB_PATH)
         self.portfolio = Portfolio(Config.PORTFOLIO_PATH)
-        self.app = Application.builder().token(self.token).build()
+        request = HTTPXRequest(proxy="socks5://3FZ26r:a7WSNy@138.219.75.204:9119")
+        self.app = Application.builder().token(self.token).request(request).build()
         self._register_handlers()
 
     def _check_whitelist(self, update: Update) -> bool:
@@ -86,17 +88,29 @@ class SokolBot:
         await update.message.reply_text(text, reply_markup=reply_markup)
 
     async def _build_radar_text(self):
-        """Построить текст радара"""
+        """Построить текст радара с реальными ценами из Tinkoff API"""
         text = "🦅 SOKOL RADAR\n━━━━━━━━━━━━━━━━━━━━\n\n"
         
-        # TODO: Загрузить реальные данные через tinkoff_client и indicators
-        # Пока заглушка
-        text += "SBER: 250.50₽ | ⚪ HOLD\n"
-        text += "GAZP: 160.25₽ | ⚪ HOLD\n"
-        text += "YNDX: 3800.00₽ | ⚪ HOLD\n"
-        text += "LKOH: 6500.00₽ | ⚪ HOLD\n"
-        text += "ROSN: 550.00₽ | ⚪ HOLD\n"
-
+        tickers = ["SBER", "GAZP", "YNDX", "LKOH", "ROSN"]
+        
+        try:
+            from tinkoff_client import TinkoffClient
+            async with TinkoffClient() as client:
+                for ticker in tickers:
+                    try:
+                        price = await client.get_current_price(ticker)
+                        if price > 0:
+                            text += f"{ticker}: {price:.2f}₽ | ⚪ HOLD\n"
+                        else:
+                            text += f"{ticker}: Н/Д | ⚪ HOLD\n"
+                    except Exception as e:
+                        text += f"{ticker}: Ошибка | ⚪ HOLD\n"
+                        logger.warning(f"Radar {ticker}: {e}")
+        except Exception as e:
+            logger.error(f"Radar error: {e}")
+            for ticker in tickers:
+                text += f"{ticker}: Н/Д | ⚪ HOLD\n"
+        
         text += f"\n━━━━━━━━━━━━━━━━━━━━\nОбновлено: {datetime.now().strftime('%H:%M')}"
         return text
 
