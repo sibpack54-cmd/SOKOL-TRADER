@@ -5,7 +5,6 @@
 import json
 import os
 from datetime import datetime
-from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict
 import logging
 
@@ -28,7 +27,7 @@ class Portfolio:
         self.portfolio_path = portfolio_path
         self.data = self._load_portfolio()
 
-    def _load_portfolio(self) -> Dict:
+    def _load_portfolio(self) -> dict:
         """Загрузить портфель из JSON"""
         if not os.path.exists(self.portfolio_path):
             os.makedirs(os.path.dirname(self.portfolio_path), exist_ok=True)
@@ -64,7 +63,7 @@ class Portfolio:
         self.data["positions"].append(asdict(position))
         self._save_portfolio()
 
-    def close_position(self, ticker: str, price: float) -> Optional[float]:
+    def close_position(self, ticker: str, price: float) -> float | None:
         """Закрыть позицию и вернуть P&L"""
         for i, pos in enumerate(self.data["positions"]):
             if pos["ticker"] == ticker and pos["status"] == "active":
@@ -79,11 +78,11 @@ class Portfolio:
         
         return None
 
-    def get_portfolio(self) -> List[Dict]:
+    def get_portfolio(self) -> list[dict]:
         """Получить все позиции"""
         return self.data["positions"]
 
-    def get_pnl(self) -> Dict:
+    def get_pnl(self) -> dict:
         """Получить общий P&L"""
         total_pnl = 0.0
         positions_pnl = []
@@ -114,18 +113,18 @@ class Portfolio:
         """Получить текущий капитал"""
         return self.data.get("capital", 100000.0)
 
-    def get_active_positions(self) -> List[Dict]:
+    def get_active_positions(self) -> list[dict]:
         """Получить только активные позиции"""
         return [pos for pos in self.data["positions"] if pos["status"] == "active"]
 
-    def get_position_by_ticker(self, ticker: str) -> Optional[Dict]:
+    def get_position_by_ticker(self, ticker: str) -> dict | None:
         """Получить позицию по тикеру"""
         for pos in self.data["positions"]:
             if pos["ticker"] == ticker and pos["status"] == "active":
                 return pos
         return None
 
-    def update_position_price(self, ticker: str, current_price: float) -> Optional[Dict]:
+    def update_position_price(self, ticker: str, current_price: float) -> dict | None:
         """Обновить текущую цену позиции и рассчитать P&L"""
         for i, pos in enumerate(self.data["positions"]):
             if pos["ticker"] == ticker and pos["status"] == "active":
@@ -142,7 +141,7 @@ class Portfolio:
                 return self.data["positions"][i]
         return None
 
-    def check_stop_loss_take_profit(self, ticker: str, current_price: float) -> Optional[str]:
+    def check_stop_loss_take_profit(self, ticker: str, current_price: float) -> str | None:
         """
         Проверить срабатывание SL/TP.
         Возвращает 'SL' или 'TP1' или 'TP2' или None

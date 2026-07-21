@@ -5,7 +5,6 @@
 import pandas as pd
 import numpy as np
 import logging
-from typing import Dict, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ def calculate_rsi(df: pd.DataFrame, period: int = 14) -> pd.Series:
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-def calculate_macd(df: pd.DataFrame, fast=12, slow=26, signal=9) -> Tuple[pd.Series, pd.Series, pd.Series, bool]:
+def calculate_macd(df: pd.DataFrame, fast=12, slow=26, signal=9) -> tuple[pd.Series, pd.Series, pd.Series, bool]:
     """MACD(12, 26, 9)"""
     ema_fast = df["close"].ewm(span=fast, adjust=False).mean()
     ema_slow = df["close"].ewm(span=slow, adjust=False).mean()
@@ -29,13 +28,13 @@ def calculate_macd(df: pd.DataFrame, fast=12, slow=26, signal=9) -> Tuple[pd.Ser
     is_bullish = macd.iloc[-1] > signal_line.iloc[-1]
     return macd, signal_line, histogram, is_bullish
 
-def calculate_obv(df: pd.DataFrame) -> Tuple[pd.Series, str]:
+def calculate_obv(df: pd.DataFrame) -> tuple[pd.Series, str]:
     """OBV"""
     obv = (np.sign(df["close"].diff()) * df["volume"]).fillna(0).cumsum()
     trend = "rising" if obv.iloc[-1] > obv.iloc[-5] else "falling"
     return obv, trend
 
-def calculate_adx(df: pd.DataFrame, period: int = 14) -> Tuple[float, float, float, str]:
+def calculate_adx(df: pd.DataFrame, period: int = 14) -> tuple[float, float, float, str]:
     """ADX(14) с защитой от недостатка данных"""
     if len(df) < 28:
         return 0.0, 0.0, 0.0, "unknown"
@@ -67,7 +66,7 @@ def calculate_adx(df: pd.DataFrame, period: int = 14) -> Tuple[float, float, flo
 
     return adx.iloc[-1], plus_di.iloc[-1], minus_di.iloc[-1], trend
 
-def calculate_vwap(df: pd.DataFrame) -> Tuple[float, float]:
+def calculate_vwap(df: pd.DataFrame) -> tuple[float, float]:
     """VWAP за текущий торговый день"""
     if df.empty:
         return 0.0, 0.0
@@ -84,7 +83,7 @@ def calculate_vwap(df: pd.DataFrame) -> Tuple[float, float]:
     
     return vwap, diff_pct
 
-def calculate_stochastic(df: pd.DataFrame, k_period=14, d_period=3, smooth=3) -> Tuple[float, float, bool, bool]:
+def calculate_stochastic(df: pd.DataFrame, k_period=14, d_period=3, smooth=3) -> tuple[float, float, bool, bool]:
     """Stochastic(14, 3, 3)"""
     if len(df) < k_period + d_period + smooth:
         return 50.0, 50.0, False, False
@@ -103,7 +102,7 @@ def calculate_stochastic(df: pd.DataFrame, k_period=14, d_period=3, smooth=3) ->
     
     return k_value, d_value, is_oversold, is_overbought
 
-def calculate_bollinger_bands(df: pd.DataFrame, period=20, std_dev=2) -> Tuple[float, float, float, str, float]:
+def calculate_bollinger_bands(df: pd.DataFrame, period=20, std_dev=2) -> tuple[float, float, float, str, float]:
     """Bollinger Bands(20, 2)"""
     if len(df) < period:
         return 0.0, 0.0, 0.0, "middle", 0.0
@@ -126,7 +125,7 @@ def calculate_bollinger_bands(df: pd.DataFrame, period=20, std_dev=2) -> Tuple[f
     
     return upper.iloc[-1], lower.iloc[-1], sma.iloc[-1], position, bandwidth
 
-def calculate_ichimoku(df: pd.DataFrame, tenkan=9, kijun=26, senkou=52) -> Tuple[float, float, str]:
+def calculate_ichimoku(df: pd.DataFrame, tenkan=9, kijun=26, senkou=52) -> tuple[float, float, str]:
     """Ichimoku(9, 26, 52)"""
     if len(df) < senkou + 26:
         return 0.0, 0.0, "unknown"
@@ -154,7 +153,7 @@ def calculate_ichimoku(df: pd.DataFrame, tenkan=9, kijun=26, senkou=52) -> Tuple
     
     return tenkan_sen.iloc[-1], kijun_sen.iloc[-1], position
 
-def get_indicators(df: pd.DataFrame) -> Dict:
+def get_indicators(df: pd.DataFrame) -> dict:
     """Получить все индикаторы для последней свечи"""
     if df.empty or len(df) < 30:
         return {}

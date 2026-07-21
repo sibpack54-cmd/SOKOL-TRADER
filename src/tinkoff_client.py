@@ -7,7 +7,6 @@ import aiohttp
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
-from typing import Optional, Dict, List
 from aiohttp import ClientTimeout
 
 from config import Config
@@ -18,9 +17,9 @@ class TinkoffClient:
     def __init__(self):
         self.token = Config.TINKOFF_TOKEN
         self.base_url = Config.TINKOFF_API_URL
-        self.figi_cache: Dict[str, str] = {}
+        self.figi_cache: dict[str, str] = {}
         self.timeout = ClientTimeout(total=10, connect=5)
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession(timeout=self.timeout)
@@ -30,7 +29,7 @@ class TinkoffClient:
         if self.session:
             await self.session.close()
 
-    async def _request(self, method: str, endpoint: str, body: Optional[dict] = None) -> dict:
+    async def _request(self, method: str, endpoint: str, body: dict | None = None) -> dict:
         """Выполнить REST API запрос с retry и backoff"""
         url = f"{self.base_url}/{endpoint}"
         headers = {
@@ -68,7 +67,7 @@ class TinkoffClient:
 
         raise Exception("Max retries exceeded")
 
-    async def get_figi(self, ticker: str) -> Optional[str]:
+    async def get_figi(self, ticker: str) -> str | None:
         """Получить FIGI по тикеру с кэшированием"""
         ticker = ticker.upper()
         
@@ -174,7 +173,7 @@ class TinkoffClient:
 
         return 0.0
 
-    async def preload_figis(self, tickers: List[str]):
+    async def preload_figis(self, tickers: list[str]):
         """Предзагрузить FIGI для всех тикеров"""
         logger.info("🔄 Предзагрузка FIGI...")
         for ticker in tickers:

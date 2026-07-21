@@ -8,7 +8,6 @@ import logging
 import os
 import threading
 from datetime import datetime
-from typing import Optional, Dict, List
 from signal_engine import SignalRecord
 
 logger = logging.getLogger(__name__)
@@ -96,7 +95,7 @@ class TruthLab:
             
             conn.commit()
 
-    def record_signal(self, signal: SignalRecord) -> Optional[str]:
+    def record_signal(self, signal: SignalRecord) -> str | None:
         """Записать сигнал в базу данных"""
         try:
             # Проверка: reason обязателен
@@ -109,11 +108,11 @@ class TruthLab:
 
             with self._db_lock:
                 with sqlite3.connect(self.db_path) as conn:
-                conn.execute("""
-                    INSERT OR REPLACE INTO signals VALUES (
+                    conn.execute("""
+                        INSERT OR REPLACE INTO signals VALUES (
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                    )
-                """, (
+                        )
+                    """, (
                     signal.signal_id,
                     signal.timestamp,
                     signal.ticker,
@@ -173,7 +172,7 @@ class TruthLab:
             logger.error(f"Failed to save signal: {e}")
             return None
 
-    def get_signal(self, signal_id: str) -> Optional[Dict]:
+    def get_signal(self, signal_id: str) -> dict | None:
         """Получить сигнал по ID"""
         with self._db_lock:
             with sqlite3.connect(self.db_path) as conn:
@@ -193,7 +192,7 @@ class TruthLab:
                     return result
                 return None
 
-    def get_signals_for_outcome_check(self, days_ago: int) -> List[Dict]:
+    def get_signals_for_outcome_check(self, days_ago: int) -> list[dict]:
         """
         Получить сигналы для проверки outcomes.
         Сигналы, созданные ровно `days_ago` дней назад.
@@ -217,7 +216,7 @@ class TruthLab:
                     results.append(result)
                 return results
 
-    def check_signal(self, signal_id: str, current_price: float, days_passed: int) -> Optional[str]:
+    def check_signal(self, signal_id: str, current_price: float, days_passed: int) -> str | None:
         """Проверить сигнал и вернуть verdict"""
         with self._db_lock:
             with sqlite3.connect(self.db_path) as conn:
@@ -253,7 +252,7 @@ class TruthLab:
                 conn.commit()
                 return verdict
 
-    def get_stats(self, ticker: Optional[str] = None) -> Dict:
+    def get_stats(self, ticker: str | None = None) -> dict:
         """Получить статистику сигналов"""
         with self._db_lock:
             with sqlite3.connect(self.db_path) as conn:
@@ -281,7 +280,7 @@ class TruthLab:
                     "loss_rate": round(loss_rate, 1)
                 }
 
-    def recalibrate_weights(self, period_days: int = 30) -> Optional[Dict]:
+    def recalibrate_weights(self, period_days: int = 30) -> dict | None:
         """Пересчитать веса на основе статистики (требует >= 10 сигналов)"""
         stats = self.get_stats()
         if stats["total"] < 10:
