@@ -18,7 +18,23 @@ class MOEXClient:
         url = f"{self.BASE_URL}/engines/stock/markets/shares/securities/{ticker}.json"
         async with self.session.get(url) as response:
             data = await response.json()
-            for item in data.get('marketdata', {}).get('data', []):
-                if len(item) > 12 and item[12] is not None:
-                    return float(item[12])
+            columns = data.get('marketdata', {}).get('columns', [])
+            rows = data.get('marketdata', {}).get('data', [])
+            
+            for row in rows:
+                row_dict = dict(zip(columns, row))
+                if row_dict.get('BOARDID') == 'TQBR':
+                    last = row_dict.get('LAST')
+                    if last is not None:
+                        return float(last)
+                    market_price = row_dict.get('MARKETPRICE')
+                    if market_price is not None:
+                        return float(market_price)
+            
+            for row in rows:
+                row_dict = dict(zip(columns, row))
+                last = row_dict.get('LAST')
+                if last is not None:
+                    return float(last)
+            
             return 0.0
