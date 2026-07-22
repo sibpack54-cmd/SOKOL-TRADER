@@ -16,7 +16,7 @@ class Config:
 
     # === Trading ===
     TIMEFRAME = os.getenv("TIMEFRAME", "15min")
-    TICKERS = [t.strip() for t in os.getenv("TICKERS", "SBER,GAZP,YNDX,LKOH,ROSN").split(",")]
+    TICKERS = [t.strip() for t in os.getenv("TICKERS", "SBER,GAZP,YDEX,LKOH,ROSN,T,VTBR,MGNT,NVTK,CHMF").split(",")]
 
     # === Risk Management ===
     RISK_PER_TRADE = float(os.getenv("RISK_PER_TRADE", "0.02"))
