@@ -11,7 +11,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from config import Config
 from lab import TruthLab
 from outcome_engine import OutcomeEngine
-from tinkoff_client import TinkoffClient
+from moex_client import MOEXClient
 from portfolio import Portfolio
 
 logging.basicConfig(level=logging.INFO)
@@ -88,29 +88,35 @@ class SokolBot:
         await update.message.reply_text(text, reply_markup=reply_markup)
 
     async def _build_radar_text(self):
-        """Построить текст радара с реальными ценами из Tinkoff API"""
+        """Построить текст радара с реальными ценами из MOEX API"""
         text = "🦅 SOKOL RADAR\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        tickers = ["SBER", "GAZP", "YDEX", "LKOH", "ROSN"]
         
-        tickers = ["SBER", "GAZP", "YNDX", "LKOH", "ROSN"]
+        logger.info(f"RADAR START: building radar at {datetime.now()}")
         
         try:
-            from tinkoff_client import TinkoffClient
-            async with TinkoffClient() as client:
+            from moex_client import MOEXClient
+            async with MOEXClient() as client:
+                logger.info("RADAR: MOEXClient initialized")
                 for ticker in tickers:
                     try:
                         price = await client.get_current_price(ticker)
+                        logger.info(f"RADAR API: {ticker} = {price}")
                         if price > 0:
                             text += f"{ticker}: {price:.2f}₽ | ⚪ HOLD\n"
                         else:
                             text += f"{ticker}: Н/Д | ⚪ HOLD\n"
                     except Exception as e:
                         text += f"{ticker}: Ошибка | ⚪ HOLD\n"
-                        logger.warning(f"Radar {ticker}: {e}")
+                        logger.error(f"RADAR ERROR {ticker}: {e}")
         except Exception as e:
-            logger.error(f"Radar error: {e}")
+            logger.error(f"RADAR FATAL: {e}")
             for ticker in tickers:
                 text += f"{ticker}: Н/Д | ⚪ HOLD\n"
         
+        text += f"\n━━━━━━━━━━━━━━━━━━━━\nОбновлено: {datetime.now().strftime('%H:%M')}"
+        logger.info(f"RADAR END: {text[:50]}...")
+        return text
         text += f"\n━━━━━━━━━━━━━━━━━━━━\nОбновлено: {datetime.now().strftime('%H:%M')}"
         return text
 
@@ -182,7 +188,7 @@ class SokolBot:
             await update.message.reply_text("⛔ Доступ запрещён")
             return
         # Создать временный client для OutcomeEngine
-        async with TinkoffClient() as client:
+        async with MOEXClient() as client:
             engine = OutcomeEngine(lab=self.lab, client=client, threshold_pct=Config.OUTCOME_THRESHOLD_PCT)
             engine.init_outcomes_table()
             stats = engine.get_statistics()
@@ -252,7 +258,7 @@ class SokolBot:
         await update.message.reply_text("⏳ Обрабатываю покупку...")
 
         try:
-            async with TinkoffClient() as client:
+            async with MOEXClient() as client:
                 # Получить текущую цену
                 current_price = await client.get_current_price(ticker)
                 if current_price == 0:
@@ -318,7 +324,7 @@ class SokolBot:
         await update.message.reply_text("⏳ Обрабатываю продажу...")
 
         try:
-            async with TinkoffClient() as client:
+            async with MOEXClient() as client:
                 # Получить текущую цену
                 current_price = await client.get_current_price(ticker)
                 if current_price == 0:
@@ -383,7 +389,7 @@ class SokolBot:
         await update.message.reply_text("⏳ Закрываю позицию по рынку...")
 
         try:
-            async with TinkoffClient() as client:
+            async with MOEXClient() as client:
                 # Получить текущую цену
                 current_price = await client.get_current_price(ticker)
                 if current_price == 0:

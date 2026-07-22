@@ -131,10 +131,10 @@ class TinkoffClient:
             candles = []
             for c in response.get("candles", []):
                 candles.append({
-                    "open": c["open"]["units"] + c["open"]["nano"] / 1e9,
-                    "high": c["high"]["units"] + c["high"]["nano"] / 1e9,
-                    "low": c["low"]["units"] + c["low"]["nano"] / 1e9,
-                    "close": c["close"]["units"] + c["close"]["nano"] / 1e9,
+                    "open": float(c["open"]["units"]) + c["open"]["nano"] / 1e9,
+                    "high": float(c["high"]["units"]) + c["high"]["nano"] / 1e9,
+                    "low": float(c["low"]["units"]) + c["low"]["nano"] / 1e9,
+                    "close": float(c["close"]["units"]) + c["close"]["nano"] / 1e9,
                     "volume": c["volume"],
                     "time": datetime.fromisoformat(c["time"].replace("Z", "+00:00"))
                 })
@@ -166,7 +166,7 @@ class TinkoffClient:
 
             if response.get("lastPrices"):
                 price = response["lastPrices"][0]["price"]
-                return price["units"] + price["nano"] / 1e9
+                return float(price["units"]) + price["nano"] / 1e9
 
         except Exception as e:
             logger.error(f"❌ Ошибка получения цены для {ticker}: {e}")
