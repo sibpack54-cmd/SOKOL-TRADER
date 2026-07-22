@@ -90,8 +90,6 @@ class SokolBot:
     async def _build_radar_text(self):
         """Построить текст радара с реальными ценами из MOEX API"""
         text = "🦅 SOKOL RADAR\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        tickers = ["SBER", "GAZP", "YDEX", "LKOH", "ROSN", "T", "VTBR", "MGNT", "NVTK", "CHMF"]
-        
         logger.info(f"RADAR START: building radar at {datetime.now()}")
         
         try:
