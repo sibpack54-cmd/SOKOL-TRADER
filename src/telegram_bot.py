@@ -64,7 +64,7 @@ class SokolBot:
 Помогаю видеть рынок яснее.
 
 Доступные команды:
-/radar — ТОП-5 возможностей
+/radar — ТОП-10 возможностей
 /portfolio — Мой портфель
 /signals — Активные сигналы
 /lab — Статистика Лаборатории
@@ -92,6 +92,8 @@ class SokolBot:
         text = "🦅 SOKOL RADAR\n━━━━━━━━━━━━━━━━━━━━\n\n"
         logger.info(f"RADAR START: building radar at {datetime.now()}")
         
+        tickers = Config.TICKERS
+        
         try:
             from moex_client import MOEXClient
             async with MOEXClient() as client:
@@ -114,8 +116,6 @@ class SokolBot:
         
         text += f"\n━━━━━━━━━━━━━━━━━━━━\nОбновлено: {datetime.now().strftime('%H:%M')}"
         logger.info(f"RADAR END: {text[:50]}...")
-        return text
-        text += f"\n━━━━━━━━━━━━━━━━━━━━\nОбновлено: {datetime.now().strftime('%H:%M')}"
         return text
 
     async def cmd_portfolio(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
