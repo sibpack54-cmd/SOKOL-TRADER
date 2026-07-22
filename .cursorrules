@@ -1,0 +1,25 @@
+# SOKOL-TRADER — правила для Cursor / AI-ассистентов
+
+## Python 3.12+ стандарты типов
+- Используй ВСТРОЕННЫЕ типы: dict, list, tuple вместо typing.Dict, List, Tuple
+- Используй X | None вместо Optional[X]
+- Используй X | Y вместо Union[X, Y]
+- НЕ импортируй из typing: Dict, List, Tuple, Optional, Union
+- Можно импортировать: Any, Callable, TypeVar, Generic (если нужно)
+
+## Примеры правильного кода
+  def get_data(ticker: str) -> dict | None:  # ✅
+  def process_signals(signals: list[dict]) -> tuple[float, str]:  # ✅
+
+  from typing import Dict, List, Optional  # ❌ НЕПРАВИЛЬНО
+
+## Архитектура проекта
+- src/ — исходники
+- data/ — данные (не коммитить)
+- logs/ — логи (не коммитить)
+- .env — секреты (НЕ КОММИТИТЬ!)
+
+## Запуск
+- Локально: python src/scheduler.py
+- Прод: systemctl restart sokol-trader
+- Логи: journalctl -u sokol-trader -f

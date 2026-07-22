@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 import logging
 from datetime import datetime, time as dt_time
-from typing import Optional, Dict, Tuple
 from dataclasses import dataclass
 
 MOSCOW_TZ = pytz.timezone('Europe/Moscow')
@@ -65,13 +64,13 @@ class SignalRecord:
     verdict_3d: str
     verdict_7d: str
     verdict_30d: str
-    reason: Dict
+    reason: dict
     created_at: str
     updated_at: str
 
 class SignalEngine:
     def __init__(self):
-        self.last_signal_time: Dict[str, datetime] = {}
+        self.last_signal_time: dict[str, datetime] = {}
         self.attention_budget_counter = 0
         self.last_budget_reset = datetime.now(MOSCOW_TZ)
 
@@ -112,7 +111,7 @@ class SignalEngine:
         
         return True
 
-    def calculate_zss(self, indicators: Dict, signal_type: str) -> Tuple[Optional[float], Optional[float], Optional[Dict]]:
+    def calculate_zss(self, indicators: dict, signal_type: str) -> tuple[float | None, float | None, dict | None]:
         """
         Рассчитать ZSS (0-5) и Confidence Decomposition.
 
@@ -175,7 +174,7 @@ class SignalEngine:
 
         return zss_score, confidence_pct, reason
 
-    def _calculate_momentum_score(self, indicators: Dict, signal_type: str) -> float:
+    def _calculate_momentum_score(self, indicators: dict, signal_type: str) -> float:
         """Рассчитать компонент momentum"""
         rsi = indicators.get('rsi', 50)
         macd_bullish = indicators.get('macd_bullish', False)
@@ -200,7 +199,7 @@ class SignalEngine:
 
         return min(score, 1.0)
 
-    def _calculate_volume_score(self, indicators: Dict) -> float:
+    def _calculate_volume_score(self, indicators: dict) -> float:
         """Рассчитать компонент volume"""
         obv_trend = indicators.get('obv_trend', 'unknown')
         volume_ratio = indicators.get('volume_ratio', 1.0)
@@ -215,7 +214,7 @@ class SignalEngine:
 
         return min(score, 1.0)
 
-    def _calculate_structure_score(self, indicators: Dict, signal_type: str) -> float:
+    def _calculate_structure_score(self, indicators: dict, signal_type: str) -> float:
         """Рассчитать компонент structure"""
         bb_position = indicators.get('bb_position', 'middle')
         vwap_diff = indicators.get('vwap_diff', 0)
@@ -239,7 +238,7 @@ class SignalEngine:
 
         return min(score, 1.0)
 
-    def _get_primary_reason(self, components: Dict, signal_type: str) -> str:
+    def _get_primary_reason(self, components: dict, signal_type: str) -> str:
         """Определить первичную причину сигнала"""
         max_component = max(components.items(), key=lambda x: x[1])
         component_name = max_component[0]
@@ -253,7 +252,7 @@ class SignalEngine:
         
         return reasons.get(component_name, 'unknown')
 
-    def _get_secondary_reasons(self, components: Dict, signal_type: str) -> list:
+    def _get_secondary_reasons(self, components: dict, signal_type: str) -> list:
         """Определить вторичные причины"""
         secondary = []
         for comp_name, value in components.items():
@@ -261,7 +260,7 @@ class SignalEngine:
                 secondary.append(comp_name)
         return secondary
 
-    def _get_contributing_indicators(self, indicators: Dict, signal_type: str) -> list:
+    def _get_contributing_indicators(self, indicators: dict, signal_type: str) -> list:
         """Определить индикаторы, способствующие сигналу"""
         contributing = []
         
@@ -308,7 +307,7 @@ class SignalEngine:
         else:
             return "C"
 
-    def check_buy_conditions(self, indicators: Dict) -> int:
+    def check_buy_conditions(self, indicators: dict) -> int:
         """Проверить условия BUY сигнала (возвращает количество выполненных условий)"""
         conditions = 0
         
@@ -335,7 +334,7 @@ class SignalEngine:
         
         return conditions
 
-    def check_sell_conditions(self, indicators: Dict) -> int:
+    def check_sell_conditions(self, indicators: dict) -> int:
         """Проверить условия SELL сигнала (возвращает количество выполненных условий)"""
         conditions = 0
         
@@ -362,7 +361,7 @@ class SignalEngine:
         
         return conditions
 
-    def generate_signal(self, indicators: Dict, ticker: str, current_price: float) -> Optional[SignalRecord]:
+    def generate_signal(self, indicators: dict, ticker: str, current_price: float) -> SignalRecord | None:
         """Генерировать сигнал на основе индикаторов"""
         
         # ЭТАП 1: ФИЛЬТРЫ

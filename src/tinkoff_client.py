@@ -7,7 +7,6 @@ import aiohttp
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
-from typing import Optional, Dict, List
 from aiohttp import ClientTimeout
 
 from config import Config
@@ -18,9 +17,9 @@ class TinkoffClient:
     def __init__(self):
         self.token = Config.TINKOFF_TOKEN
         self.base_url = Config.TINKOFF_API_URL
-        self.figi_cache: Dict[str, str] = {}
+        self.figi_cache: dict[str, str] = {}
         self.timeout = ClientTimeout(total=10, connect=5)
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession(timeout=self.timeout)
@@ -30,7 +29,7 @@ class TinkoffClient:
         if self.session:
             await self.session.close()
 
-    async def _request(self, method: str, endpoint: str, body: Optional[dict] = None) -> dict:
+    async def _request(self, method: str, endpoint: str, body: dict | None = None) -> dict:
         """Выполнить REST API запрос с retry и backoff"""
         url = f"{self.base_url}/{endpoint}"
         headers = {
@@ -68,7 +67,7 @@ class TinkoffClient:
 
         raise Exception("Max retries exceeded")
 
-    async def get_figi(self, ticker: str) -> Optional[str]:
+    async def get_figi(self, ticker: str) -> str | None:
         """Получить FIGI по тикеру с кэшированием"""
         ticker = ticker.upper()
         
@@ -132,10 +131,10 @@ class TinkoffClient:
             candles = []
             for c in response.get("candles", []):
                 candles.append({
-                    "open": c["open"]["units"] + c["open"]["nano"] / 1e9,
-                    "high": c["high"]["units"] + c["high"]["nano"] / 1e9,
-                    "low": c["low"]["units"] + c["low"]["nano"] / 1e9,
-                    "close": c["close"]["units"] + c["close"]["nano"] / 1e9,
+                    "open": float(c["open"]["units"]) + c["open"]["nano"] / 1e9,
+                    "high": float(c["high"]["units"]) + c["high"]["nano"] / 1e9,
+                    "low": float(c["low"]["units"]) + c["low"]["nano"] / 1e9,
+                    "close": float(c["close"]["units"]) + c["close"]["nano"] / 1e9,
                     "volume": c["volume"],
                     "time": datetime.fromisoformat(c["time"].replace("Z", "+00:00"))
                 })
@@ -167,14 +166,14 @@ class TinkoffClient:
 
             if response.get("lastPrices"):
                 price = response["lastPrices"][0]["price"]
-                return price["units"] + price["nano"] / 1e9
+                return float(price["units"]) + price["nano"] / 1e9
 
         except Exception as e:
             logger.error(f"❌ Ошибка получения цены для {ticker}: {e}")
 
         return 0.0
 
-    async def preload_figis(self, tickers: List[str]):
+    async def preload_figis(self, tickers: list[str]):
         """Предзагрузить FIGI для всех тикеров"""
         logger.info("🔄 Предзагрузка FIGI...")
         for ticker in tickers:

@@ -3,16 +3,23 @@ version: '3.8'
 services:
   sokol-trader:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     container_name: sokol-trader
     restart: unless-stopped
     env_file:
-      - ../.env
+      - .env
     volumes:
-      - ../data:/app/data
+      - ./data:/app/data
+      - ./logs:/app/logs
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

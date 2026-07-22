@@ -6,8 +6,9 @@ SOKOL-TRADER v0.6.2
 import asyncio
 import logging
 import os
+import signal
+import sys
 from datetime import datetime
-from typing import Dict
 
 import telegram
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -20,6 +21,7 @@ from signal_engine import SignalEngine
 from telegram_bot import SokolBot
 from lab import TruthLab
 from outcome_engine import OutcomeEngine
+from portfolio import Portfolio
 
 # Настройка логирования
 os.makedirs('logs', exist_ok=True)
@@ -33,12 +35,32 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Глобальные переменные для graceful shutdown
+shutdown_event = asyncio.Event()
+scheduler_instance = None
+
+
+def graceful_shutdown(signum, frame):
+    """Обработчик сигналов завершения"""
+    logger.info(f"Получен сигнал {signum}, сохраняю состояние...")
+    shutdown_event.set()
+    if scheduler_instance:
+        scheduler_instance.shutdown(wait=False)
+    logger.info("👋 SOKOL-TRADER остановлен")
+    sys.exit(0)
+
+
+# Регистрация обработчиков сигналов
+signal.signal(signal.SIGTERM, graceful_shutdown)
+signal.signal(signal.SIGINT, graceful_shutdown)
+
 
 async def scan_market(
     bot: SokolBot,
     tinkoff: TinkoffClient,
     signal_engine: SignalEngine,
-    lab: TruthLab
+    lab: TruthLab,
+    portfolio: Portfolio
 ) -> None:
     """Сканировать рынок и генерировать сигналы."""
     if not signal_engine.is_market_open():
@@ -67,6 +89,11 @@ async def scan_market(
             signal = signal_engine.generate_signal(indicators, ticker, current_price)
 
             if signal:
+                # Проверка: не покупаем если уже в позиции
+                if signal.signal_type == "BUY" and portfolio.get_position_by_ticker(ticker):
+                    logger.info("⏭️ Пропуск BUY сигнала для %s (уже в позиции)", ticker)
+                    continue
+
                 signal_id = lab.record_signal(signal)
                 logger.info(
                     "✅ СИГНАЛ %s | %s | ZSS=%.2f | Confidence=%.1f%%",
@@ -85,6 +112,44 @@ async def scan_market(
             errors += 1
 
     logger.info("📊 Сканирование завершено: %d сигналов, %d ошибок", signals_found, errors)
+
+
+async def check_positions(
+    portfolio: Portfolio,
+    tinkoff: TinkoffClient,
+    bot: SokolBot
+) -> None:
+    """Проверить позиции на SL/TP и обновить P&L"""
+    active_positions = portfolio.get_active_positions()
+
+    if not active_positions:
+        logger.debug("Нет активных позиций для проверки")
+        return
+
+    logger.info(f"🔍 Проверка {len(active_positions)} позиций...")
+
+    for pos in active_positions:
+        ticker = pos["ticker"]
+        try:
+            current_price = await tinkoff.get_current_price(ticker)
+            if current_price == 0:
+                logger.warning(f"Не удалось получить цену для {ticker}")
+                continue
+
+            # Обновить P&L
+            updated_pos = portfolio.update_position_price(ticker, current_price)
+            if updated_pos:
+                pnl_pct = updated_pos.get("pnl_pct", 0)
+                logger.info(f"{ticker}: P&L = {pnl_pct:+.2f}%")
+
+            # Проверить SL/TP
+            sl_tp_result = portfolio.check_stop_loss_take_profit(ticker, current_price)
+            if sl_tp_result:
+                logger.warning(f"⚠️ {ticker}: сработал {sl_tp_result}!")
+                await bot.send_sl_tp_alert(ticker, sl_tp_result, current_price, pos)
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка проверки позиции {ticker}: {e}")
 
 
 async def scheduled_outcome_check(
@@ -116,7 +181,7 @@ async def scheduled_outcome_check(
         logger.error("❌ Outcome check failed: %s", e)
 
 
-async def send_outcome_report(bot: SokolBot, stats: Dict) -> None:
+async def send_outcome_report(bot: SokolBot, stats: dict) -> None:
     """Отправить отчёт по outcomes в Telegram."""
     try:
         parts = []
@@ -216,6 +281,7 @@ async def main() -> None:
     config = Config()
     lab = TruthLab(config.DB_PATH)
     signal_engine = SignalEngine()
+    portfolio = Portfolio(config.PORTFOLIO_PATH)
 
     logger.info("📁 База данных: %s", config.DB_PATH)
     logger.info("📈 Тикеры: %s", ", ".join(Config.TICKERS))
@@ -232,20 +298,33 @@ async def main() -> None:
         logger.info("🤖 Telegram Bot инициализирован")
 
         # Scheduler
+        global scheduler_instance
         scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+        scheduler_instance = scheduler
 
         # Задача 1: Сканирование рынка каждые 15 минут
         scheduler.add_job(
             scan_market,
             'interval',
             minutes=15,
-            args=[bot, tinkoff, signal_engine, lab],
+            args=[bot, tinkoff, signal_engine, lab, portfolio],
             id="market_scanner",
             replace_existing=True
         )
         logger.info("🕐 Сканер: каждые 15 минут")
 
-        # Задача 2: Ежедневная проверка outcomes в 19:00 МСК
+        # Задача 2: Проверка позиций каждые 5 минут
+        scheduler.add_job(
+            check_positions,
+            'interval',
+            minutes=5,
+            args=[portfolio, tinkoff, bot],
+            id="position_checker",
+            replace_existing=True
+        )
+        logger.info("🕐 Проверка позиций: каждые 5 минут")
+
+        # Задача 3: Ежедневная проверка outcomes в 19:00 МСК
         check_time = Config.OUTCOME_CHECK_TIME.split(":")
         scheduler.add_job(
             scheduled_outcome_check,
@@ -271,17 +350,19 @@ async def main() -> None:
 
         # Ждём сигнала остановки
         try:
-            while True:
+            while not shutdown_event.is_set():
                 await asyncio.sleep(1)
         except KeyboardInterrupt:
             logger.info("🛑 Остановка по запросу пользователя...")
         finally:
+            shutdown_event.set()
             bot_task.cancel()
             try:
                 await bot_task
             except asyncio.CancelledError:
                 pass
-            scheduler.shutdown()
+            if scheduler_instance:
+                scheduler_instance.shutdown(wait=False)
             logger.info("👋 SOKOL-TRADER остановлен")
 
 

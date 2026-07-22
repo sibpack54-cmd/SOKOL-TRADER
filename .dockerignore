@@ -1,0 +1,48 @@
+# Environment
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# Data
+data/*.db
+data/*.json
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+AUDIT_REPORT.md
+DEPLOY.md
+
+# Scripts
+install_deps.ps1
+run.ps1
+install_deps.sh
+run.sh
+
+# Misc
+sokol_files.txt
